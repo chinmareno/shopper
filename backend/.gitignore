@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Optional: ignore build output
+dist/
+
+# Prisma generated client
+prisma/generated/
+prisma/migrations/
+
+# Ignore Prisma migration folders (already ignored above but keep explicit)
+prisma/migrations/*
+
+# node_modules
+node_modules/
+
+# Uploaded files
+uploads/payment-proof/*
+!uploads/payment-proof/.gitkeep
+
+# Testing and Test Coverage
+tests/
+jest.config.js
+coverage/
+.jest/
+*.test.ts
+*.spec.ts
+test-results/

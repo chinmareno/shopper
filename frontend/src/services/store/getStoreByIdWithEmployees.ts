@@ -1,0 +1,31 @@
+import { apiFetch } from "@/lib/apiFetch";
+import {
+  GetStoreByIdInput,
+  GetStoreByIdSchema,
+} from "@/schemas/store/GetStoreByIdSchema";
+import { Store } from "@/types/Store";
+import { User } from "@/types/User";
+import { toast } from "sonner";
+import { ReadonlyHeaders } from "next/dist/server/web/spec-extension/adapters/headers";
+
+export const getStoreByIdWithEmployees = async (
+  inputData: GetStoreByIdInput,
+  headers?: ReadonlyHeaders
+) => {
+  const parseResult = GetStoreByIdSchema.safeParse(inputData);
+
+  if (!parseResult.success) {
+    const firstError = parseResult.error.issues[0].message;
+    if (typeof window !== "undefined") {
+      toast.error(firstError || "Invalid input");
+    }
+    throw new Error(firstError);
+  }
+
+  const res = await apiFetch<Store & { employees: User[] }>(
+    `/stores/${inputData.id}/employees`,
+    { method: "GET", headers }
+  );
+
+  return res;
+};

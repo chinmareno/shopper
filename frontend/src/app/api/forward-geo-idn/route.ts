@@ -1,0 +1,61 @@
+import { MIN_LOCATION_SEARCH_LENGTH } from "@/constants/geo";
+import { NextResponse } from "next/server";
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const location = searchParams.get("q");
+
+    if (!location || location.length < MIN_LOCATION_SEARCH_LENGTH) {
+      return NextResponse.json(null);
+    }
+
+    const results = await getForwardGeoIdnOpenCage(location);
+    return NextResponse.json(results);
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json([], { status: 500 });
+  }
+}
+
+type ForwardGeoResponse = {
+  results: {
+    formatted: string;
+    geometry: { lat: number; lng: number };
+  }[];
+};
+
+async function getForwardGeoIdnOpenCage(location: string) {
+  const API_KEY = process.env.OPEN_CAGE_API_KEY;
+  if (!location) return null;
+
+  try {
+    const params = new URLSearchParams({
+      key: API_KEY!,
+      q: location,
+      countrycode: "id",
+      limit: "4",
+      no_annotations: "1",
+    });
+
+    const res = await fetch(
+      `https://api.opencagedata.com/geocode/v1/json?${params}`
+    );
+
+    if (!res.ok) throw new Error();
+
+    const data = (await res.json()) as ForwardGeoResponse;
+    const results = data.results;
+
+    if (!results?.length) return null;
+
+    return results.map((r) => ({
+      lat: r.geometry.lat,
+      lng: r.geometry.lng,
+      name: r.formatted,
+    }));
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+}

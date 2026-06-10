@@ -63,8 +63,11 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",").map(origin => origin.trim())
-    : [process.env.CLIENT_URL || "http://localhost:3000", "http://localhost:3001"],
+    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+    : [
+        process.env.CLIENT_URL || "http://localhost:3000",
+        "http://localhost:3001",
+      ],
   socialProviders: {
     google:
       process.env.GOOGLE_CLIENT && process.env.GOOGLE_SECRET

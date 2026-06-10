@@ -1,9 +1,10 @@
 {
   "main": "dist/src/index.js",
   "scripts": {
-    "build": "tsc",
+    "generate": "prisma generate",
+    "build": "npm run generate && prisma migrate deploy && tsc",
     "start": "node dist/src/index.js",
-    "dev": "nodemon src/index.ts",
+    "dev": "prisma generate && prisma migrate dev && nodemon src/index.ts",
     "lint": "eslint 'src/**/*.{ts,js}' --ext .ts",
     "lint:fix": "eslint 'src/**/*.{ts,js}' --ext .ts --fix",
     "test-db": "ts-node scripts/test-db.ts",

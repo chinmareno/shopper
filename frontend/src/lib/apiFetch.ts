@@ -50,7 +50,8 @@ export async function apiFetch<T>(url: string, input: ApiInit): Promise<T> {
     if (res.ok) return data as T;
 
     if (typeof window !== "undefined") {
-      const errorMessage = data?.error || data?.message || "Internal Server Error";
+      const errorMessage =
+        data?.error || data?.message || "Internal Server Error";
       toast.error(errorMessage);
       console.error("API Error:", {
         url: `${apiUrl}/api${url}`,

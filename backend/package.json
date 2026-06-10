@@ -1,6 +1,5 @@
 {
   "main": "dist/src/index.js",
-  "type": "module",
   "scripts": {
     "generate": "prisma generate",
     "build": "npm run generate && prisma db push && tsc",

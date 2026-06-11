@@ -4,7 +4,7 @@ import { NotFoundError } from "../error/NotFoundError";
 import { BadRequestError } from "../error/BadRequestError";
 import { VoucherResponse } from "../repository/voucher/entity";
 import { VoucherType } from "../../prisma/generated/client";
-import Decimal from "decimal.js";
+import { Decimal } from "decimal.js";
 
 export class ReferralService {
   private usersRepo: UsersRepo;
@@ -30,8 +30,11 @@ export class ReferralService {
    */
   async applyReferralCode(
     newUserId: string,
-    referralCode: string
-  ): Promise<{ referrerVoucher: VoucherResponse; refereeVoucher: VoucherResponse }> {
+    referralCode: string,
+  ): Promise<{
+    referrerVoucher: VoucherResponse;
+    refereeVoucher: VoucherResponse;
+  }> {
     const users = await this.usersRepo.getUsersByFilter({ id: newUserId });
     if (users.length === 0) {
       throw new NotFoundError("User not found");
@@ -55,7 +58,10 @@ export class ReferralService {
     }
 
     // Atomically link user to referrer once (prevents switching/race duplicates)
-    const didAssignReferral = await this.usersRepo.setReferredByOnce(newUserId, referrer.id);
+    const didAssignReferral = await this.usersRepo.setReferredByOnce(
+      newUserId,
+      referrer.id,
+    );
     if (!didAssignReferral) {
       throw new BadRequestError("Referral code can only be used once");
     }
@@ -63,22 +69,24 @@ export class ReferralService {
     // Get referral discount configuration from environment variables
     const discountConfig = {
       name: process.env.REFERRAL_DISCOUNT_NAME || "Referral Reward",
-      type: (process.env.REFERRAL_DISCOUNT_TYPE || "PERCENTAGE") as "PERCENTAGE" | "FIXED_AMOUNT",
-      percentage: process.env.REFERRAL_DISCOUNT_PERCENTAGE 
-        ? new Decimal(process.env.REFERRAL_DISCOUNT_PERCENTAGE) 
+      type: (process.env.REFERRAL_DISCOUNT_TYPE || "PERCENTAGE") as
+        | "PERCENTAGE"
+        | "FIXED_AMOUNT",
+      percentage: process.env.REFERRAL_DISCOUNT_PERCENTAGE
+        ? new Decimal(process.env.REFERRAL_DISCOUNT_PERCENTAGE)
         : undefined,
-      amount: process.env.REFERRAL_DISCOUNT_AMOUNT 
-        ? Number(process.env.REFERRAL_DISCOUNT_AMOUNT) 
+      amount: process.env.REFERRAL_DISCOUNT_AMOUNT
+        ? Number(process.env.REFERRAL_DISCOUNT_AMOUNT)
         : undefined,
       isWithMinimum: process.env.REFERRAL_DISCOUNT_WITH_MINIMUM === "true",
-      minimumPrice: process.env.REFERRAL_DISCOUNT_MINIMUM_PRICE 
-        ? Number(process.env.REFERRAL_DISCOUNT_MINIMUM_PRICE) 
+      minimumPrice: process.env.REFERRAL_DISCOUNT_MINIMUM_PRICE
+        ? Number(process.env.REFERRAL_DISCOUNT_MINIMUM_PRICE)
         : undefined,
-      startsAt: process.env.REFERRAL_DISCOUNT_STARTS_AT 
-        ? new Date(process.env.REFERRAL_DISCOUNT_STARTS_AT) 
+      startsAt: process.env.REFERRAL_DISCOUNT_STARTS_AT
+        ? new Date(process.env.REFERRAL_DISCOUNT_STARTS_AT)
         : undefined,
-      endsAt: process.env.REFERRAL_DISCOUNT_ENDS_AT 
-        ? new Date(process.env.REFERRAL_DISCOUNT_ENDS_AT) 
+      endsAt: process.env.REFERRAL_DISCOUNT_ENDS_AT
+        ? new Date(process.env.REFERRAL_DISCOUNT_ENDS_AT)
         : undefined,
       isQuantityLimited: true,
       maxUses: 1,
@@ -120,7 +128,7 @@ export class ReferralService {
     return {
       referralCode: user[0].referralCode,
       totalReferrals: user[0].referrals.length,
-      referrals: user[0].referrals.map(ref => ({
+      referrals: user[0].referrals.map((ref) => ({
         id: ref.id,
         email: ref.email,
         createdAt: ref.createdAt,

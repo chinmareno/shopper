@@ -1,8 +1,21 @@
-import { CreateVoucherInput, GetVouchersByFilterInput, UpdateVoucherInput } from "../../schema/voucher/index";
-import { VoucherCreateReq, VoucherFilter, VoucherResponse, VoucherUpdateReq } from "../../repository/voucher/entity";
+import {
+  CreateVoucherInput,
+  GetVouchersByFilterInput,
+  UpdateVoucherInput,
+} from "../../schema/voucher/index";
+import {
+  VoucherCreateReq,
+  VoucherFilter,
+  VoucherResponse,
+  VoucherUpdateReq,
+} from "../../repository/voucher/entity";
 import { Service } from "./interface";
-import { VoucherRepo, PaginatedResponse, VoucherQueryOptions } from "../../repository/voucher/interface";
-import Decimal from "decimal.js";
+import {
+  VoucherRepo,
+  PaginatedResponse,
+  VoucherQueryOptions,
+} from "../../repository/voucher/interface";
+import { Decimal } from "decimal.js";
 import { BadRequestError } from "../../error/BadRequestError";
 import { calculateStackedDiscount } from "../../lib/discount/calculateStackedDiscount";
 import { DiscountResponse } from "../../repository/discount/entity";
@@ -38,8 +51,12 @@ export class VoucherService implements Service {
   async createVoucher(data: CreateVoucherInput): Promise<VoucherResponse> {
     const createData: VoucherCreateReq = {
       ...data,
-      percentage: data.percentage !== undefined ? new Decimal(data.percentage) : undefined,
-      isQuantityLimited: data.voucherType === "REFERRAL" ? true : data.isQuantityLimited,
+      percentage:
+        data.percentage !== undefined
+          ? new Decimal(data.percentage)
+          : undefined,
+      isQuantityLimited:
+        data.voucherType === "REFERRAL" ? true : data.isQuantityLimited,
       maxUses: data.voucherType === "REFERRAL" ? 1 : data.maxUses,
     };
     return this.repo.createVoucher(createData);
@@ -49,7 +66,10 @@ export class VoucherService implements Service {
     const { id, ...restData } = data;
     const updateData: Partial<VoucherUpdateReq> = {
       ...restData,
-      percentage: restData.percentage !== undefined ? new Decimal(restData.percentage) : undefined,
+      percentage:
+        restData.percentage !== undefined
+          ? new Decimal(restData.percentage)
+          : undefined,
     };
     return this.repo.updateVoucher(id, updateData);
   }
@@ -58,14 +78,23 @@ export class VoucherService implements Service {
    * Get vouchers with flexible filtering options.
    * Supports field filters, active date filtering, and pagination.
    */
-  async getVouchersByFilter(filter: GetVouchersByFilterInput, options?: VoucherQueryOptions): Promise<PaginatedResponse<VoucherResponse>> {
+  async getVouchersByFilter(
+    filter: GetVouchersByFilterInput,
+    options?: VoucherQueryOptions,
+  ): Promise<PaginatedResponse<VoucherResponse>> {
     const { percentage, page, limit, ...rest } = filter;
     const formattedFilter: Partial<VoucherFilter> = {
       ...rest,
-      ...(percentage !== undefined ? { percentage: new Decimal(percentage) } : {}),
+      ...(percentage !== undefined
+        ? { percentage: new Decimal(percentage) }
+        : {}),
     };
 
-    return this.repo.getVouchersByFilter(formattedFilter, { page, limit }, options);
+    return this.repo.getVouchersByFilter(
+      formattedFilter,
+      { page, limit },
+      options,
+    );
   }
 
   async getVoucherById(id: string): Promise<VoucherResponse | null> {
@@ -114,7 +143,10 @@ export class VoucherService implements Service {
     return normalized;
   }
 
-  private calculateFreeDeliveryDiscount(voucher: VoucherResponse, shippingCost: number): number {
+  private calculateFreeDeliveryDiscount(
+    voucher: VoucherResponse,
+    shippingCost: number,
+  ): number {
     if (shippingCost <= 0) {
       return 0;
     }
@@ -128,14 +160,18 @@ export class VoucherService implements Service {
     }
 
     if (discount.type === "PERCENTAGE") {
-      const rawDiscount = shippingCost * (Number(discount.percentage ?? 0) / 100);
+      const rawDiscount =
+        shippingCost * (Number(discount.percentage ?? 0) / 100);
       return Math.max(0, Math.min(Math.round(rawDiscount), shippingCost));
     }
 
     return 0;
   }
 
-  private calculateBestFreeQuantity(quantity: number, rules: Array<{ buyQuantity: number; freeQuantity: number }>): number {
+  private calculateBestFreeQuantity(
+    quantity: number,
+    rules: Array<{ buyQuantity: number; freeQuantity: number }>,
+  ): number {
     if (quantity <= 0 || rules.length === 0) {
       return 0;
     }
@@ -169,7 +205,10 @@ export class VoucherService implements Service {
     }
 
     const quantityVouchers = vouchers.filter((voucher) => {
-      return voucher.voucherType !== "FREEDELIVERY" && voucher.discount.type === "QUANTITY";
+      return (
+        voucher.voucherType !== "FREEDELIVERY" &&
+        voucher.discount.type === "QUANTITY"
+      );
     });
 
     if (quantityVouchers.length === 0) {
@@ -201,9 +240,10 @@ export class VoucherService implements Service {
           continue;
         }
 
-        const voucherFreeQuantity = this.calculateBestFreeQuantity(item.quantity, [
-          { buyQuantity, freeQuantity },
-        ]);
+        const voucherFreeQuantity = this.calculateBestFreeQuantity(
+          item.quantity,
+          [{ buyQuantity, freeQuantity }],
+        );
 
         if (voucherFreeQuantity > bestFreeQuantity) {
           bestFreeQuantity = voucherFreeQuantity;
@@ -214,14 +254,19 @@ export class VoucherService implements Service {
         continue;
       }
 
-      const currentFreeQuantity = quantityBonusByProductId.get(item.productId) ?? 0;
-      quantityBonusByProductId.set(item.productId, currentFreeQuantity + bestFreeQuantity);
-
+      const currentFreeQuantity =
+        quantityBonusByProductId.get(item.productId) ?? 0;
+      quantityBonusByProductId.set(
+        item.productId,
+        currentFreeQuantity + bestFreeQuantity,
+      );
     }
 
     return {
       discount: 0,
-      quantityBonuses: Array.from(quantityBonusByProductId.entries()).map(([productId, freeQuantity]) => ({ productId, freeQuantity })),
+      quantityBonuses: Array.from(quantityBonusByProductId.entries()).map(
+        ([productId, freeQuantity]) => ({ productId, freeQuantity }),
+      ),
       perVoucherSavings: [],
     };
   }
@@ -231,8 +276,16 @@ export class VoucherService implements Service {
    * - Non-FREEDELIVERY vouchers reduce item subtotal.
    * - FREEDELIVERY vouchers reduce shipping cost (max one best voucher applied).
    */
-  async calculateVoucherDiscountBreakdown(voucherIdentifiers: string[], subtotal: number, userId?: string, shippingCost: number = 0, cartItems?: VoucherCartLine[]): Promise<VoucherDiscountBreakdown> {
-    const normalizedIdentifiers = this.normalizeVoucherIdentifiers(voucherIdentifiers ?? []);
+  async calculateVoucherDiscountBreakdown(
+    voucherIdentifiers: string[],
+    subtotal: number,
+    userId?: string,
+    shippingCost: number = 0,
+    cartItems?: VoucherCartLine[],
+  ): Promise<VoucherDiscountBreakdown> {
+    const normalizedIdentifiers = this.normalizeVoucherIdentifiers(
+      voucherIdentifiers ?? [],
+    );
     if (normalizedIdentifiers.length === 0) {
       return {
         productDiscount: 0,
@@ -243,7 +296,10 @@ export class VoucherService implements Service {
       };
     }
 
-    const [vouchersByIds, vouchersByCodes] = await Promise.all([this.getVouchersByIds(normalizedIdentifiers), this.getVouchersByCodes(normalizedIdentifiers)]);
+    const [vouchersByIds, vouchersByCodes] = await Promise.all([
+      this.getVouchersByIds(normalizedIdentifiers),
+      this.getVouchersByCodes(normalizedIdentifiers),
+    ]);
 
     const vouchersMap = new Map<string, VoucherResponse>();
     for (const voucher of [...vouchersByIds, ...vouchersByCodes]) {
@@ -252,7 +308,9 @@ export class VoucherService implements Service {
 
     const vouchers = Array.from(vouchersMap.values());
 
-    const activeVouchers = vouchers.filter((voucher) => !voucher.isSoftDeleted && !voucher.discount.isSoftDeleted);
+    const activeVouchers = vouchers.filter(
+      (voucher) => !voucher.isSoftDeleted && !voucher.discount.isSoftDeleted,
+    );
 
     const matchedVoucherKeys = new Set<string>();
     for (const voucher of activeVouchers) {
@@ -260,15 +318,23 @@ export class VoucherService implements Service {
       matchedVoucherKeys.add(voucher.code.toLowerCase());
     }
 
-    const invalidOrUnavailableIdentifiers = normalizedIdentifiers.filter((identifier) => !matchedVoucherKeys.has(identifier.toLowerCase()));
+    const invalidOrUnavailableIdentifiers = normalizedIdentifiers.filter(
+      (identifier) => !matchedVoucherKeys.has(identifier.toLowerCase()),
+    );
     if (invalidOrUnavailableIdentifiers.length > 0) {
-      throw new BadRequestError(`Voucher is invalid, unavailable, or already redeemed: ${invalidOrUnavailableIdentifiers.join(", ")}`);
+      throw new BadRequestError(
+        `Voucher is invalid, unavailable, or already redeemed: ${invalidOrUnavailableIdentifiers.join(", ")}`,
+      );
     }
 
-    const unauthorizedAssignedVouchers = activeVouchers.filter((voucher) => voucher.userId !== null && voucher.userId !== userId);
+    const unauthorizedAssignedVouchers = activeVouchers.filter(
+      (voucher) => voucher.userId !== null && voucher.userId !== userId,
+    );
 
     if (unauthorizedAssignedVouchers.length > 0) {
-      throw new BadRequestError("Voucher can only be used by its assigned user");
+      throw new BadRequestError(
+        "Voucher can only be used by its assigned user",
+      );
     }
 
     const now = new Date();
@@ -277,9 +343,15 @@ export class VoucherService implements Service {
       const discount = voucher.discount;
       const hasStarted = !discount.startsAt || discount.startsAt <= now;
       const hasNotEnded = !discount.endsAt || discount.endsAt >= now;
-      const minimumPassed = !discount.isWithMinimum || discount.minimumPrice === null || subtotal >= discount.minimumPrice;
-      const available = !discount.isQuantityLimited || (discount.maxUses !== null && discount.useCounter < discount.maxUses);
-      const limitedDiscountAvailable = !discount.hasDiscountAmountCap || discount.maxDiscountAmount !== null;
+      const minimumPassed =
+        !discount.isWithMinimum ||
+        discount.minimumPrice === null ||
+        subtotal >= discount.minimumPrice;
+      const available =
+        !discount.isQuantityLimited ||
+        (discount.maxUses !== null && discount.useCounter < discount.maxUses);
+      const limitedDiscountAvailable =
+        !discount.hasDiscountAmountCap || discount.maxDiscountAmount !== null;
       let quantityVoucherConditionPassed = true;
       let quantityVoucherReason: string | null = null;
 
@@ -302,7 +374,9 @@ export class VoucherService implements Service {
             quantityVoucherConditionPassed = false;
             quantityVoucherReason = "eligible cart item not found";
           } else if (
-            !candidateItems.some((item) => item.quantity >= (discount.buyQuantity ?? 0))
+            !candidateItems.some(
+              (item) => item.quantity >= (discount.buyQuantity ?? 0),
+            )
           ) {
             quantityVoucherConditionPassed = false;
             quantityVoucherReason = `minimum quantity not met (required qty: ${discount.buyQuantity ?? 0})`;
@@ -321,22 +395,34 @@ export class VoucherService implements Service {
         let reason = "not applicable";
         if (!hasStarted) reason = "not started yet";
         else if (!hasNotEnded) reason = "expired";
-        else if (!minimumPassed) reason = `minimum not met (required: ${discount.minimumPrice ?? "-"})`;
+        else if (!minimumPassed)
+          reason = `minimum not met (required: ${discount.minimumPrice ?? "-"})`;
         else if (!available) reason = "no remaining uses";
-        else if (!limitedDiscountAvailable) reason = "invalid discount cap configuration";
-        else if (!quantityVoucherConditionPassed) reason = quantityVoucherReason ?? "quantity voucher condition not met";
+        else if (!limitedDiscountAvailable)
+          reason = "invalid discount cap configuration";
+        else if (!quantityVoucherConditionPassed)
+          reason =
+            quantityVoucherReason ?? "quantity voucher condition not met";
         notApplicable.push({ code: voucher.code, reason });
       }
       return isApplicable;
     });
 
     if (notApplicable.length > 0) {
-      const unique = Array.from(new Map(notApplicable.map((x) => [x.code, x])).values()).map((x) => `${x.code}: ${x.reason}`);
-      throw new BadRequestError(`Voucher is not applicable: ${unique.join(", ")}`);
+      const unique = Array.from(
+        new Map(notApplicable.map((x) => [x.code, x])).values(),
+      ).map((x) => `${x.code}: ${x.reason}`);
+      throw new BadRequestError(
+        `Voucher is not applicable: ${unique.join(", ")}`,
+      );
     }
 
-    const productVouchers = applicableVouchers.filter((voucher) => voucher.voucherType !== "FREEDELIVERY");
-    const shippingVouchers = applicableVouchers.filter((voucher) => voucher.voucherType === "FREEDELIVERY");
+    const productVouchers = applicableVouchers.filter(
+      (voucher) => voucher.voucherType !== "FREEDELIVERY",
+    );
+    const shippingVouchers = applicableVouchers.filter(
+      (voucher) => voucher.voucherType === "FREEDELIVERY",
+    );
     const appliedVouchers: Array<{
       code: string;
       type: "PRODUCT" | "QUANTITY" | "SHIPPING";
@@ -344,7 +430,8 @@ export class VoucherService implements Service {
     }> = [];
 
     let productDiscount = 0;
-    let quantityBonuses: Array<{ productId: string; freeQuantity: number }> = [];
+    let quantityBonuses: Array<{ productId: string; freeQuantity: number }> =
+      [];
     if (productVouchers.length > 0) {
       const productVoucherMapByDiscountId = new Map<string, VoucherResponse>();
       productVouchers.forEach((voucher) => {
@@ -377,17 +464,26 @@ export class VoucherService implements Service {
         });
       });
 
-      const quantityVoucher = this.calculateQuantityVoucherDiscount(productVouchers, cartItems);
+      const quantityVoucher = this.calculateQuantityVoucherDiscount(
+        productVouchers,
+        cartItems,
+      );
 
       quantityBonuses = quantityVoucher.quantityBonuses;
-      productDiscount = Math.min(subtotal, Math.max(0, priceDiscount + quantityVoucher.discount));
+      productDiscount = Math.min(
+        subtotal,
+        Math.max(0, priceDiscount + quantityVoucher.discount),
+      );
     }
 
     let shippingDiscount = 0;
     if (shippingCost > 0 && shippingVouchers.length > 0) {
       let bestShippingVoucherCode: string | null = null;
       shippingDiscount = shippingVouchers.reduce((best, voucher) => {
-        const candidate = this.calculateFreeDeliveryDiscount(voucher, shippingCost);
+        const candidate = this.calculateFreeDeliveryDiscount(
+          voucher,
+          shippingCost,
+        );
         if (candidate > best) {
           bestShippingVoucherCode = voucher.code;
         }
@@ -405,16 +501,18 @@ export class VoucherService implements Service {
     }
 
     const mergedAppliedVouchers = Array.from(
-      appliedVouchers.reduce((acc, voucher) => {
-        const key = `${voucher.code}:${voucher.type}`;
-        const existing = acc.get(key);
-        if (existing) {
-          existing.savedAmount += voucher.savedAmount;
+      appliedVouchers
+        .reduce((acc, voucher) => {
+          const key = `${voucher.code}:${voucher.type}`;
+          const existing = acc.get(key);
+          if (existing) {
+            existing.savedAmount += voucher.savedAmount;
+            return acc;
+          }
+          acc.set(key, { ...voucher });
           return acc;
-        }
-        acc.set(key, { ...voucher });
-        return acc;
-      }, new Map<string, { code: string; type: "PRODUCT" | "QUANTITY" | "SHIPPING"; savedAmount: number }>() ).values(),
+        }, new Map<string, { code: string; type: "PRODUCT" | "QUANTITY" | "SHIPPING"; savedAmount: number }>())
+        .values(),
     );
 
     return {
@@ -430,8 +528,20 @@ export class VoucherService implements Service {
    * Calculate total voucher discount amount.
    * FREEDELIVERY vouchers are applied against shipping cost when provided.
    */
-  async calculateVoucherDiscount(voucherIdentifiers: string[], subtotal: number, userId?: string, shippingCost: number = 0, cartItems?: VoucherCartLine[]): Promise<number> {
-    const breakdown = await this.calculateVoucherDiscountBreakdown(voucherIdentifiers, subtotal, userId, shippingCost, cartItems);
+  async calculateVoucherDiscount(
+    voucherIdentifiers: string[],
+    subtotal: number,
+    userId?: string,
+    shippingCost: number = 0,
+    cartItems?: VoucherCartLine[],
+  ): Promise<number> {
+    const breakdown = await this.calculateVoucherDiscountBreakdown(
+      voucherIdentifiers,
+      subtotal,
+      userId,
+      shippingCost,
+      cartItems,
+    );
 
     return breakdown.totalDiscount;
   }

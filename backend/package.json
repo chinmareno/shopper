@@ -2,7 +2,7 @@
   "main": "dist/src/index.js",
   "scripts": {
     "generate": "prisma generate",
-    "build": "npm run generate && prisma db push && esbuild src/index.ts --bundle --platform=node --outfile=dist/src/index.js --external:@prisma/client --external:sharp --external:prisma --external:node-cron",
+    "build": "npm run generate && prisma db push && tsc",
     "start": "node dist/src/index.js",
     "dev": "prisma generate && prisma migrate dev && nodemon src/index.ts",
     "lint": "eslint 'src/**/*.{ts,js}' --ext .ts",
@@ -12,7 +12,6 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
-  "type": "module",
   "dependencies": {
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
@@ -47,7 +46,6 @@
     "@types/sharp": "^0.31.1",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
-    "esbuild": "^0.28.0",
     "eslint": "^9.39.2",
     "jest": "^30.2.0",
     "nodemon": "^3.1.11",
